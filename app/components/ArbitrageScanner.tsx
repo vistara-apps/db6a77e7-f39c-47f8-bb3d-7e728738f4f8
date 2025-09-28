@@ -1,103 +1,56 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  ArrowRight, 
-  Zap, 
-  RefreshCw, 
+import {
+  TrendingUp,
+  ArrowRight,
+  Zap,
+  RefreshCw,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { ArbitrageOpportunity } from '@/lib/types';
 import { formatCurrency, formatPercentage } from '@/lib/utils';
+import { useArbitrageScanner, useArbitrageExecution } from '@/lib/hooks/useArbitrageScanner';
+import { useOrderNotifications } from '@/lib/hooks/useNotifications';
 
 interface ArbitrageScannerProps {
   onExecute: (opportunity: ArbitrageOpportunity) => void;
 }
 
 export function ArbitrageScanner({ onExecute }: ArbitrageScannerProps) {
-  const [opportunities, setOpportunities] = useState<ArbitrageOpportunity[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
-  const [lastScan, setLastScan] = useState<Date | null>(null);
+  const { opportunities, loading, error, isScanning, lastScan, scan } = useArbitrageScanner();
+  const { executing, execute } = useArbitrageExecution();
+  const { notifyArbitrageExecuted, notifyTransactionFailed } = useOrderNotifications();
+  const [executingOpportunity, setExecutingOpportunity] = useState<string | null>(null);
 
-  // Mock data for demonstration
-  const mockOpportunities: ArbitrageOpportunity[] = [
-    {
-      id: '1',
-      token: {
-        address: '0x4200000000000000000000000000000000000006',
-        symbol: 'WETH',
-        name: 'Wrapped Ether',
-        decimals: 18
-      },
-      buyExchange: 'Uniswap V3',
-      sellExchange: 'Aerodrome',
-      buyPrice: '2,456.78',
-      sellPrice: '2,478.92',
-      profitPotential: '22.14',
-      profitPercentage: '0.90',
-      requiredCapital: '5,000',
-      gasEstimate: '0.0045',
-      confidence: 'high'
-    },
-    {
-      id: '2',
-      token: {
-        address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-        symbol: 'USDC',
-        name: 'USD Coin',
-        decimals: 6
-      },
-      buyExchange: 'BaseSwap',
-      sellExchange: 'SushiSwap',
-      buyPrice: '0.9998',
-      sellPrice: '1.0012',
-      profitPotential: '14.00',
-      profitPercentage: '0.14',
-      requiredCapital: '10,000',
-      gasEstimate: '0.0032',
-      confidence: 'medium'
-    },
-    {
-      id: '3',
-      token: {
-        address: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
-        symbol: 'DAI',
-        name: 'Dai Stablecoin',
-        decimals: 18
-      },
-      buyExchange: 'Aerodrome',
-      sellExchange: 'Uniswap V3',
-      buyPrice: '0.9995',
-      sellPrice: '1.0008',
-      profitPotential: '13.00',
-      profitPercentage: '0.13',
-      requiredCapital: '10,000',
-      gasEstimate: '0.0038',
-      confidence: 'low'
+  const handleExecuteArbitrage = async (opportunity: ArbitrageOpportunity) => {
+    setExecutingOpportunity(opportunity.id);
+
+    try {
+      // In a real app, get user address from wallet
+      const mockUserAddress = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+      const result = await execute(opportunity, mockUserAddress);
+
+      if (result.success && result.txHash) {
+        notifyArbitrageExecuted(opportunity.profitPotential, opportunity.token.symbol);
+        onExecute(opportunity);
+      } else {
+        notifyTransactionFailed('Arbitrage execution failed');
+      }
+    } catch (err) {
+      notifyTransactionFailed(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setExecutingOpportunity(null);
     }
-  ];
-
-  const scanForOpportunities = async () => {
-    setIsScanning(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setOpportunities(mockOpportunities);
-    setLastScan(new Date());
-    setIsScanning(false);
   };
 
   useEffect(() => {
-    scanForOpportunities();
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(scanForOpportunities, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    // Initial scan
+    scan();
+  }, [scan]);
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -142,17 +95,33 @@ export function ArbitrageScanner({ onExecute }: ArbitrageScannerProps) {
       <div className="glass-card p-4 rounded-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className={`w-3 h-3 rounded-full ${isScanning ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${
+              isScanning ? 'bg-yellow-400 animate-pulse' :
+              error ? 'bg-red-400' :
+              'bg-green-400'
+            }`}></div>
             <span className="text-sm font-medium">
-              {isScanning ? 'Scanning for opportunities...' : `${opportunities.length} opportunities found`}
+              {isScanning ? 'Scanning for opportunities...' :
+               error ? 'Scan failed' :
+               `${opportunities.length} opportunities found`}
             </span>
           </div>
-          {lastScan && (
+          {lastScan && !error && (
             <span className="text-sm text-text-secondary">
               Last scan: {lastScan.toLocaleTimeString()}
             </span>
           )}
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <span className="text-sm text-red-400">{error}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Opportunities List */}
@@ -237,11 +206,17 @@ export function ArbitrageScanner({ onExecute }: ArbitrageScannerProps) {
 
                 {/* Execute Button */}
                 <button
-                  onClick={() => onExecute(opportunity)}
-                  className="w-full btn-primary flex items-center justify-center space-x-2"
+                  onClick={() => handleExecuteArbitrage(opportunity)}
+                  disabled={executing && executingOpportunity === opportunity.id}
+                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   <Zap className="w-4 h-4" />
-                  <span>Execute Arbitrage</span>
+                  <span>
+                    {executing && executingOpportunity === opportunity.id
+                      ? 'Executing...'
+                      : 'Execute Arbitrage'
+                    }
+                  </span>
                 </button>
               </div>
             );

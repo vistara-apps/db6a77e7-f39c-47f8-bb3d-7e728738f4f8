@@ -5,6 +5,7 @@ import { ChevronDown, Search } from 'lucide-react';
 import { BASE_TOKENS } from '@/lib/constants';
 import { Token } from '@/lib/types';
 import { formatToken } from '@/lib/utils';
+import { useTokenBalance } from '@/lib/hooks/useTokenPrices';
 
 interface TokenInputProps {
   label: string;
@@ -23,13 +24,21 @@ export function TokenInput({
   amount,
   onTokenSelect,
   onAmountChange,
-  balance,
+  balance: providedBalance,
   disabled = false,
   showMaxButton = false
 }: TokenInputProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Use real balance if token is provided and no balance was passed
+  const { balance: realBalance, loading: balanceLoading } = useTokenBalance(
+    token,
+    '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' // Mock user address
+  );
+
+  const displayBalance = providedBalance || realBalance;
 
   const filteredTokens = BASE_TOKENS.filter(t =>
     t.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -48,8 +57,8 @@ export function TokenInput({
   }, []);
 
   const handleMaxClick = () => {
-    if (balance) {
-      onAmountChange(balance);
+    if (displayBalance && displayBalance !== '0.00') {
+      onAmountChange(displayBalance);
     }
   };
 
@@ -57,9 +66,9 @@ export function TokenInput({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium text-text-secondary">{label}</label>
-        {balance && (
+        {displayBalance && displayBalance !== '0.00' && (
           <span className="text-sm text-text-secondary">
-            Balance: {formatToken(balance)}
+            Balance: {balanceLoading ? '...' : formatToken(displayBalance)}
           </span>
         )}
       </div>

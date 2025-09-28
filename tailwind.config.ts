@@ -9,7 +9,33 @@ const config: Config = {
   darkMode: ["class"],
   theme: {
     extend: {
+      // Custom design tokens from BaseSwap Scout spec
       colors: {
+        // Background colors
+        bg: "hsl(210 25% 10%)",
+        surface: "hsl(210 25% 15%)",
+
+        // Accent colors
+        accent: "hsl(140 60% 55%)",
+        primary: "hsl(210 60% 50%)",
+
+        // Text colors
+        "text-primary": "hsl(0 0% 95%)",
+        "text-secondary": "hsl(0 0% 75%)",
+
+        // Status colors
+        success: "hsl(140 60% 55%)",
+        error: "hsl(0 75% 60%)",
+        warning: "hsl(45 100% 60%)",
+        info: "hsl(210 60% 50%)",
+
+        // Legacy shadcn colors for compatibility
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -84,10 +110,36 @@ const config: Config = {
           5: "hsl(var(--chart-5))",
         },
       },
+      // Custom spacing from design system
+      spacing: {
+        lg: "16px",
+        md: "12px",
+        sm: "8px",
+        xl: "24px",
+      },
+
+      // Custom border radius from design system
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "16px",
+        md: "10px",
+        sm: "6px",
+        // Legacy shadcn radius for compatibility
+        "shadcn-lg": "var(--radius)",
+        "shadcn-md": "calc(var(--radius) - 2px)",
+        "shadcn-sm": "calc(var(--radius) - 4px)",
+      },
+
+      // Custom typography from design system
+      fontSize: {
+        display: ["2.25rem", { lineHeight: "1", fontWeight: "700" }],
+        heading: ["1.5rem", { lineHeight: "1.3", fontWeight: "600" }],
+        body: ["1rem", { lineHeight: "1.75" }],
+        caption: ["0.875rem", { lineHeight: "1.4" }],
+      },
+
+      // Custom shadows from design system
+      boxShadow: {
+        card: "0 4px 12px hsla(0, 0%, 0%, 0.20)",
       },
       keyframes: {
         "accordion-down": {
@@ -105,6 +157,67 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Custom utilities for the design system
+    function({ addUtilities, theme }: any) {
+      addUtilities({
+        '.glass-card': {
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        },
+        '.btn-primary': {
+          backgroundColor: theme('colors.accent'),
+          color: 'black',
+          fontWeight: '600',
+          padding: '0.5rem 1rem',
+          borderRadius: theme('borderRadius.md'),
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            backgroundColor: theme('colors.accent'),
+            opacity: '0.9',
+            transform: 'translateY(-1px)',
+          },
+          '&:disabled': {
+            opacity: '0.5',
+            cursor: 'not-allowed',
+            transform: 'none',
+          },
+        },
+        '.btn-secondary': {
+          backgroundColor: 'transparent',
+          color: theme('colors.text-primary'),
+          border: `1px solid ${theme('colors.surface')}`,
+          fontWeight: '600',
+          padding: '0.5rem 1rem',
+          borderRadius: theme('borderRadius.md'),
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            backgroundColor: theme('colors.surface'),
+            borderColor: theme('colors.accent'),
+          },
+        },
+        '.text-display': {
+          fontSize: theme('fontSize.display')[0],
+          lineHeight: theme('fontSize.display')[1].lineHeight,
+          fontWeight: theme('fontSize.display')[1].fontWeight,
+        },
+        '.text-heading': {
+          fontSize: theme('fontSize.heading')[0],
+          lineHeight: theme('fontSize.heading')[1].lineHeight,
+          fontWeight: theme('fontSize.heading')[1].fontWeight,
+        },
+        '.text-body': {
+          fontSize: theme('fontSize.body')[0],
+          lineHeight: theme('fontSize.body')[1].lineHeight,
+        },
+        '.text-caption': {
+          fontSize: theme('fontSize.caption')[0],
+          lineHeight: theme('fontSize.caption')[1].lineHeight,
+          color: theme('colors.text-secondary'),
+        },
+      });
+    },
+  ],
 };
 export default config;
