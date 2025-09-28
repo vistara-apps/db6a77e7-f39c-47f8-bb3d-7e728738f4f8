@@ -1,0 +1,30 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "frame": {
+    "version": "1",
+    "name": "BaseSwap Scout",
+    "subtitle": "Built with Zara",
+    "description": "BaseSwap Scout is a Base Mini App built with Zara.",
+    "iconUrl": "https://0co.to/images/zara-2.png",
+    "homeUrl": "https://db6a77e7f39c47f8bb3d7e728738f4f8-ifbc.vercel.app",
+    "splashImageUrl": "https://db6a77e7f39c47f8bb3d7e728738f4f8-ifbc.vercel.app/splash.png",
+    "splashBackgroundColor": "#000000",
+    "heroImageUrl": "https://db6a77e7f39c47f8bb3d7e728738f4f8-ifbc.vercel.app/image.png",
+    "tagline": "BaseSwap Scout",
+    "screenshotUrls": [
+      "https://db6a77e7f39c47f8bb3d7e728738f4f8-ifbc.vercel.app/screenshot.png",
+      "https://db6a77e7f39c47f8bb3d7e728738f4f8-ifbc.vercel.app/screenshot.png"
+    ],
+    "primaryCategory": "social",
+    "tags": [
+      "base",
+      "miniapp",
+      "onchainkit"
+    ],
+    "webhookUrl": "https://db6a77e7f39c47f8bb3d7e728738f4f8-ifbc.vercel.app/api/webhook"
+  }
+}
