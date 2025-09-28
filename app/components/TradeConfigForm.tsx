@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Settings2, Zap, Target, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings2, Zap, Target, AlertTriangle, Loader2 } from 'lucide-react';
 import { TokenInput } from './TokenInput';
-import { Token, TradeOrder } from '@/lib/types';
+import { Token, TradeOrder, SwapQuote } from '@/lib/types';
 import { BASE_TOKENS, DEFAULT_SLIPPAGE } from '@/lib/constants';
 import { formatCurrency, generateId } from '@/lib/utils';
+import { useOrderExecution } from '@/lib/hooks/useOrderExecution';
+import { useOrderNotifications } from '@/lib/hooks/useNotifications';
+import { useTokenPrices } from '@/lib/hooks/useTokenPrices';
 
 interface TradeConfigFormProps {
   variant: 'limitOrder' | 'arbitrageSearch';
@@ -21,26 +24,55 @@ export function TradeConfigForm({ variant, onSubmit }: TradeConfigFormProps) {
   const [orderType, setOrderType] = useState<'limit' | 'stop-loss'>('limit');
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { executing, error: executionError, quote, getQuote, executeOrder } = useOrderExecution();
+  const { notifyOrderCreated, notifyTransactionFailed } = useOrderNotifications();
+  const { getPrice } = useTokenPrices();
+
+  // Get quote when tokens or amount change
+  useEffect(() => {
+    if (fromToken && toToken && fromAmount && parseFloat(fromAmount) > 0) {
+      getQuote({
+        fromToken,
+        toToken,
+        amount: fromAmount,
+      });
+    }
+  }, [fromToken, toToken, fromAmount, getQuote]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!fromToken || !toToken || !fromAmount || !triggerPrice) {
       return;
     }
 
-    const order: Partial<TradeOrder> = {
-      orderId: generateId(),
-      fromToken: fromToken.address,
-      toToken: toToken.address,
-      amount: fromAmount,
-      orderType,
-      triggerPrice,
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    try {
+      const order: Partial<TradeOrder> = {
+        orderId: generateId(),
+        fromToken: fromToken.address,
+        toToken: toToken.address,
+        amount: fromAmount,
+        orderType,
+        triggerPrice,
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-    onSubmit(order);
+      // In a real app, get user address from wallet
+      const mockUserAddress = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+
+      const result = await executeOrder(order as TradeOrder, mockUserAddress);
+
+      if (result.success) {
+        notifyOrderCreated(order.orderId!, fromToken.symbol, toToken.symbol);
+        onSubmit(order);
+      } else {
+        notifyTransactionFailed('Failed to create order');
+      }
+    } catch (err) {
+      notifyTransactionFailed(err instanceof Error ? err.message : 'Unknown error');
+    }
   };
 
   const swapTokens = () => {
@@ -211,17 +243,33 @@ export function TradeConfigForm({ variant, onSubmit }: TradeConfigFormProps) {
         )}
       </div>
 
+      {/* Error Display */}
+      {executionError && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-sm text-red-400">{executionError}</span>
+          </div>
+        </div>
+      )}
+
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={!isFormValid}
+        disabled={!isFormValid || executing}
         className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
       >
-        <Zap className="w-4 h-4" />
+        {executing ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Zap className="w-4 h-4" />
+        )}
         <span>
-          {variant === 'limitOrder' 
-            ? `Create ${orderType === 'limit' ? 'Limit' : 'Stop Loss'} Order`
-            : 'Start Arbitrage Search'
+          {executing
+            ? 'Creating Order...'
+            : variant === 'limitOrder'
+              ? `Create ${orderType === 'limit' ? 'Limit' : 'Stop Loss'} Order`
+              : 'Start Arbitrage Search'
           }
         </span>
       </button>
@@ -237,7 +285,12 @@ export function TradeConfigForm({ variant, onSubmit }: TradeConfigFormProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-text-secondary">You'll receive:</span>
-              <span>~{(parseFloat(fromAmount || '0') * parseFloat(triggerPrice || '0')).toFixed(4)} {toToken?.symbol}</span>
+              <span>
+                {quote
+                  ? `~${quote.toAmount} ${toToken?.symbol}`
+                  : `~${(parseFloat(fromAmount || '0') * parseFloat(triggerPrice || '0')).toFixed(4)} ${toToken?.symbol}`
+                }
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-text-secondary">Trigger price:</span>
@@ -247,6 +300,18 @@ export function TradeConfigForm({ variant, onSubmit }: TradeConfigFormProps) {
               <span className="text-text-secondary">Slippage:</span>
               <span>{slippage}%</span>
             </div>
+            {quote && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Gas estimate:</span>
+                  <span>{quote.gasEstimate} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Price impact:</span>
+                  <span>{quote.priceImpact}%</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

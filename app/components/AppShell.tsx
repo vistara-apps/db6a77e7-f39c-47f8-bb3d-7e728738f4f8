@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import { Name, Avatar } from '@coinbase/onchainkit/identity';
+import { NotificationCenter } from './NotificationCenter';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -65,8 +66,10 @@ export function AppShell({ children, variant = 'default' }: AppShellProps) {
               })}
             </nav>
 
-            {/* Wallet Connection */}
+            {/* Wallet Connection & Notifications */}
             <div className="flex items-center space-x-3">
+              <NotificationCenter />
+
               <ConnectWallet>
                 <div className="flex items-center space-x-2 bg-surface border border-gray-600 rounded-lg px-3 py-2 hover:border-accent/50 transition-all duration-200">
                   <Wallet className="w-4 h-4" />
